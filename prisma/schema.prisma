@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Tenant {
+  id            String          @id @default(uuid())
+  slug          String          @unique
+  name          String
+  slotInterval  Int             @default(30) // Granularidad de la agenda en minutos (ej: 15, 20, 30, 60)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  
+  users         User[]
+  services      Service[]
+  bookings      Booking[]
+  businessHours BusinessHours[]
+}
+
+model User {
+  id               String    @id @default(uuid())
+  email            String    @unique
+  password         String
+  role             Role      @default(USER)
+  tenantId         String
+  tenant           Tenant    @relation(fields: [tenantId], references: [id])
+  
+  // Relación como cliente (opcional si el cliente se registra)
+  bookings         Booking[] @relation("CustomerBookings")
+  // Relación como profesional (quien realiza el servicio)
+  assignedBookings Booking[] @relation("StaffBookings")
+  
+  createdAt        DateTime  @default(now())
+
+  @@index([tenantId])
+}
+
+enum Role {
+  ADMIN
+  STAFF
+  USER
+}
+
+model Service {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  price       Float
+  duration    Int       // Duración en minutos
+  isActive    Boolean   @default(true)
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  bookings    Booking[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([tenantId])
+}
+
+model Booking {
+  id                String        @id @default(uuid())
+  startTime         DateTime
+  endTime           DateTime
+  status            BookingStatus @default(PENDING)
+  
+  // Datos del Cliente (Obligatorios para el flujo sin registro)
+  customerName      String
+  customerEmail     String
+  customerPhone     String?
+  
+  // Relaciones opcionales
+  userId            String?       // ID del usuario si decide registrarse/loguearse
+  user              User?         @relation("CustomerBookings", fields: [userId], references: [id])
+  
+  staffId           String?       // Profesional asignado
+  staff             User?         @relation("StaffBookings", fields: [staffId], references: [id])
+  
+  tenantId          String
+  tenant            Tenant        @relation(fields: [tenantId], references: [id])
+  serviceId         String
+  service           Service       @relation(fields: [serviceId], references: [id])
+
+  // Motor de Reservas: Bloqueos temporales y Validación
+  validationToken   String?       @unique // Token para confirmar vía email/wsp
+  expiresAt         DateTime?     // Para "soft-locks": si no confirma antes de X tiempo, se libera
+  
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([tenantId, startTime])
+  @@index([status])
+}
+
+enum BookingStatus {
+  PENDING     // Reservado temporalmente (soft-lock)
+  CONFIRMED   // Validado por el cliente/sistema
+  CANCELLED   // Cancelado
+  COMPLETED   // Servicio realizado
+  NOSHOW      // No se presentó
+}
+
+model BusinessHours {
+  id        String   @id @default(uuid())
+  dayOfWeek Int      // 0-6 (Domingo-Sábado)
+  openTime  String   // Formato "HH:mm"
+  closeTime String   // Formato "HH:mm"
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, dayOfWeek])
+}
