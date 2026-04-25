@@ -49,6 +49,14 @@ export class TenantsService {
     return tenant;
   }
 
+  async getBusinessHoursBySlug(slug: string) {
+    const tenant = await this.findBySlug(slug);
+    return this.prisma.businessHours.findMany({
+      where: { tenantId: tenant.id },
+      orderBy: { dayOfWeek: 'asc' },
+    });
+  }
+
   async update(id: string, updateTenantDto: UpdateTenantDto) {
     await this.findOne(id);
 

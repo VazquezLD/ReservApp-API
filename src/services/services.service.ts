@@ -8,46 +8,50 @@ export class ServicesService {
   constructor(private prisma: PrismaService) {}
 
   async create(createServiceDto: CreateServiceDto) {
+    const tenantId = this.prisma.tenantContext.getTenantId();
+    if (!tenantId) throw new Error('Tenant ID not found');
+
     return this.prisma.service.create({
-      data: createServiceDto,
+      data: {
+        ...createServiceDto,
+        tenantId,
+      },
     });
   }
 
-  // Listar todos los servicios de un Tenant específico
-  async findAllByTenant(tenantId: string) {
+  async findAll() {
+    const tenantId = this.prisma.tenantContext.getTenantId();
     return this.prisma.service.findMany({
       where: { tenantId },
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  async findOne(id: string, tenantId: string) {
+  async findOne(id: string) {
+    const tenantId = this.prisma.tenantContext.getTenantId();
     const service = await this.prisma.service.findFirst({
       where: { id, tenantId },
     });
 
     if (!service) {
-      throw new NotFoundException(`Service with ID ${id} for tenant ${tenantId} not found`);
+      throw new NotFoundException(`Servicio no encontrado`);
     }
 
     return service;
   }
 
-  async update(id: string, tenantId: string, updateServiceDto: UpdateServiceDto) {
-    await this.findOne(id, tenantId);
-
-    return this.prisma.service.update({
-      where: { id },
+  async update(id: string, updateServiceDto: UpdateServiceDto) {
+    const tenantId = this.prisma.tenantContext.getTenantId();
+    return this.prisma.service.updateMany({
+      where: { id, tenantId },
       data: updateServiceDto,
     });
   }
 
-  async remove(id: string, tenantId: string) {
-    await this.findOne(id, tenantId);
-    
-    // Podríamos usar Soft Delete en el futuro, por ahora es físico
-    return this.prisma.service.delete({
-      where: { id },
+  async remove(id: string) {
+    const tenantId = this.prisma.tenantContext.getTenantId();
+    return this.prisma.service.deleteMany({
+      where: { id, tenantId },
     });
   }
 }

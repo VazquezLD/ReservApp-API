@@ -1,4 +1,5 @@
 import { IsString, IsNotEmpty, IsNumber, IsInt, Min, IsOptional, IsBoolean } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateServiceDto {
   @IsString()
@@ -11,15 +12,17 @@ export class CreateServiceDto {
 
   @IsNumber()
   @Min(0)
+  @Type(() => Number)
   price: number;
 
   @IsInt()
   @Min(1)
+  @Type(() => Number)
   duration: number; // En minutos
 
   @IsString()
-  @IsNotEmpty()
-  tenantId: string;
+  @IsOptional()
+  tenantId?: string;
 
   @IsBoolean()
   @IsOptional()

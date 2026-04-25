@@ -27,6 +27,11 @@ export class TenantsController {
     return this.tenantsService.findBySlug(slug);
   }
 
+  @Get('slug/:slug/business-hours')
+  getBusinessHoursBySlug(@Param('slug') slug: string) {
+    return this.tenantsService.getBusinessHoursBySlug(slug);
+  }
+
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateTenantDto: UpdateTenantDto) {
     return this.tenantsService.update(id, updateTenantDto);
