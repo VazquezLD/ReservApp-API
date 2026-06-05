@@ -31,6 +31,9 @@ export const handler = async (req: any, res: any) => {
   return server(req, res);
 };
 
+// Exportación por defecto para Vercel
+export default handler;
+
 // Soporte para ejecución local
 if (process.env.NODE_ENV !== 'production') {
   async function startLocal() {
