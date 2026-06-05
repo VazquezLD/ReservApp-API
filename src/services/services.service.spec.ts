@@ -1,20 +1,26 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ServicesService } from './services.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContext } from '../prisma/tenant-context.service';
 import { NotFoundException } from '@nestjs/common';
 
 describe('ServicesService', () => {
   let service: ServicesService;
   let prisma: PrismaService;
+  let tenantContext: TenantContext;
 
   const mockPrisma = {
     service: {
       create: jest.fn(),
       findMany: jest.fn(),
       findFirst: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
+      updateMany: jest.fn(),
+      deleteMany: jest.fn(),
     },
+  };
+
+  const mockTenantContext = {
+    getTenantId: jest.fn().mockReturnValue('tenant-1'),
   };
 
   beforeEach(async () => {
@@ -25,11 +31,16 @@ describe('ServicesService', () => {
           provide: PrismaService,
           useValue: mockPrisma,
         },
+        {
+          provide: TenantContext,
+          useValue: mockTenantContext,
+        },
       ],
     }).compile();
 
     service = module.get<ServicesService>(ServicesService);
     prisma = module.get<PrismaService>(PrismaService);
+    tenantContext = module.get<TenantContext>(TenantContext);
   });
 
   it('should be defined', () => {
@@ -41,7 +52,7 @@ describe('ServicesService', () => {
       const mockResult = { id: '1', name: 'Test Service', tenantId: 'tenant-1' };
       mockPrisma.service.findFirst.mockResolvedValue(mockResult);
 
-      const result = await service.findOne('1', 'tenant-1');
+      const result = await service.findOne('1');
       expect(result).toEqual(mockResult);
       expect(prisma.service.findFirst).toHaveBeenCalledWith({
         where: { id: '1', tenantId: 'tenant-1' },
@@ -51,11 +62,11 @@ describe('ServicesService', () => {
     it('should throw NotFoundException if service not found for the tenant', async () => {
       mockPrisma.service.findFirst.mockResolvedValue(null);
 
-      await expect(service.findOne('1', 'tenant-1')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('1')).rejects.toThrow(NotFoundException);
     });
   });
 
-  describe('findAllByTenant', () => {
+  describe('findAll', () => {
     it('should return all services for a specific tenant', async () => {
       const mockServices = [
         { id: '1', name: 'Service 1', tenantId: 'tenant-1' },
@@ -63,7 +74,7 @@ describe('ServicesService', () => {
       ];
       mockPrisma.service.findMany.mockResolvedValue(mockServices);
 
-      const result = await service.findAllByTenant('tenant-1');
+      const result = await service.findAll();
       expect(result).toHaveLength(2);
       expect(prisma.service.findMany).toHaveBeenCalledWith({
         where: { tenantId: 'tenant-1' },

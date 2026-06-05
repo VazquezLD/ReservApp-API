@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { TenantContext } from '../prisma/tenant-context.service';
 import { BookingStatus } from '@prisma/client';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -8,6 +9,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 export class BookingsService {
   constructor(
     private prisma: PrismaService,
+    private tenantContext: TenantContext,
     private notificationsService: NotificationsService
   ) {}
 
@@ -15,7 +17,7 @@ export class BookingsService {
     const { serviceId, startTime, customerName, customerEmail, customerPhone } = createBookingDto;
     
     // El tenantId debe venir del contexto (si es admin) o resolverse si es público
-    let tenantId = this.prisma.tenantContext.getTenantId();
+    let tenantId = this.tenantContext.getTenantId();
 
     const service = await this.prisma.service.findUnique({
       where: { id: serviceId },
@@ -67,7 +69,7 @@ export class BookingsService {
   }
 
   async findAll() {
-    const tenantId = this.prisma.tenantContext.getTenantId();
+    const tenantId = this.tenantContext.getTenantId();
     return this.prisma.booking.findMany({
       where: { tenantId },
       include: { service: true },
@@ -76,7 +78,7 @@ export class BookingsService {
   }
 
   async findOne(id: string) {
-    const tenantId = this.prisma.tenantContext.getTenantId();
+    const tenantId = this.tenantContext.getTenantId();
     const booking = await this.prisma.booking.findFirst({
       where: { id, tenantId },
       include: { service: true },
@@ -97,7 +99,7 @@ export class BookingsService {
   }
 
   async updateStatus(id: string, status: BookingStatus) {
-    const tenantId = this.prisma.tenantContext.getTenantId();
+    const tenantId = this.tenantContext.getTenantId();
     if (!tenantId) throw new BadRequestException('Tenant ID no encontrado en el contexto');
 
     const booking = await this.prisma.booking.findFirst({
